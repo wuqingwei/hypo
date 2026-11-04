@@ -1,0 +1,111 @@
+// Package app exposes the Hypo services bound to the frontend.
+//
+// The service layer is intentionally thin: it owns no cleanup logic. It
+// locates the engine once, hands typed JSON snapshots to the UI, and turns
+// engine failures into messages the dashboard can render.
+package app
+
+import (
+	"context"
+	"errors"
+	"sync"
+
+	"github.com/wuqingwei/hypo/internal/engine"
+)
+
+// notFoundMessage is what the dashboard shows when no engine tree exists.
+const notFoundMessage = "No Mole engine was found. Hypo drives the open-source " +
+	"Mole CLI for every operation and never deletes anything itself. Install " +
+	"the engine next to Hypo (an \"engine\" folder beside the executable), keep " +
+	"a Mole checkout beside the Hypo source tree, or point HYPO_ENGINE_ROOT at " +
+	"an engine tree, then retry."
+
+// errNoEngine is returned by every engine call while no engine is installed.
+var errNoEngine = errors.New("no Mole engine is installed; see GetEngineInfo")
+
+// EngineInfo describes the engine Hypo is driving, including the friendly
+// failure the UI shows when none is installed.
+type EngineInfo struct {
+	Found   bool   `json:"found"`
+	Root    string `json:"root,omitempty"`
+	Version string `json:"version,omitempty"`
+	Source  string `json:"source,omitempty"`
+	Error   string `json:"error,omitempty"`
+}
+
+// Service is the Wails service for the M0 dashboard: engine presence, one
+// metrics snapshot, recent history.
+type Service struct {
+	mu     sync.Mutex
+	client *engine.Client
+	info   EngineInfo
+}
+
+// New locates the engine and returns a ready service. A missing engine is not
+// an error here: the app must start and show guidance, not crash.
+func New() *Service {
+	svc := &Service{}
+	svc.RefreshEngine()
+	return svc
+}
+
+// GetEngineInfo returns the current engine presence and location.
+func (s *Service) GetEngineInfo() EngineInfo {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.info
+}
+
+// RefreshEngine re-runs the locator. The dashboard calls it after the user
+// installs an engine or sets HYPO_ENGINE_ROOT.
+func (s *Service) RefreshEngine() EngineInfo {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	install, err := engine.Locate()
+	if err != nil {
+		s.client = nil
+		if errors.Is(err, engine.ErrNotFound) {
+			s.info = EngineInfo{Found: false, Error: notFoundMessage}
+		} else {
+			s.info = EngineInfo{Found: false, Error: err.Error()}
+		}
+		return s.info
+	}
+	s.client = engine.NewClient(install)
+	s.info = EngineInfo{
+		Found:   true,
+		Root:    install.Root,
+		Version: install.Version,
+		Source:  string(install.Source),
+	}
+	return s.info
+}
+
+// GetStatus returns one metrics snapshot for the dashboard.
+func (s *Service) GetStatus() (*engine.StatusSnapshot, error) {
+	client, err := s.engineClient()
+	if err != nil {
+		return nil, err
+	}
+	return client.Status(context.Background())
+}
+
+// GetHistory returns the newest operations-log entries. limit follows the
+// engine's rules (1-200); 0 keeps the engine default.
+func (s *Service) GetHistory(limit int) (*engine.HistoryReport, error) {
+	client, err := s.engineClient()
+	if err != nil {
+		return nil, err
+	}
+	return client.History(context.Background(), limit)
+}
+
+func (s *Service) engineClient() (*engine.Client, error) {
+	s.mu.Lock()
+	client := s.client
+	s.mu.Unlock()
+	if client == nil {
+		return nil, errNoEngine
+	}
+	return client, nil
+}

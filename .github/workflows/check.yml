@@ -1,0 +1,50 @@
+name: Check
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Frontend install and build (includes type check)
+        working-directory: frontend
+        run: |
+          npm ci
+          npm run build
+
+      - name: Go format check
+        run: |
+          unformatted=$(gofmt -l .)
+          if [ -n "$unformatted" ]; then
+            echo "gofmt needed on:" && echo "$unformatted"
+            exit 1
+          fi
+
+      - name: Go vet (internal, host platform)
+        run: go vet ./internal/...
+
+      - name: Go tests
+        run: go test ./internal/...
+
+      # The full graph needs the Windows webview packages (pure Go); vetting
+      # and building for GOOS=windows avoids the host's gtk/webkit cgo deps.
+      - name: Go vet (full, windows target)
+        run: GOOS=windows go vet ./...
+
+      - name: Windows build
+        run: GOOS=windows go build -o bin/hypo.exe .
