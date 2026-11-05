@@ -62,6 +62,23 @@ export function GetStatus(): $CancellablePromise<engine$0.StatusSnapshot | null>
 }
 
 /**
+ * GetUninstallList returns the installed applications inventory.
+ */
+export function GetUninstallList(): $CancellablePromise<engine$0.UninstallApp[] | null> {
+    return $Call.ByID(2604657178);
+}
+
+/**
+ * GetUninstallSelect runs the engine's headless uninstall for the given
+ * selection keys after the frontend has collected an explicit confirmation.
+ * The engine rereads every registration right before launch and re-runs its
+ * guards; Hypo adds nothing to the decision.
+ */
+export function GetUninstallSelect(ids: string[] | null): $CancellablePromise<engine$0.UninstallRun | null> {
+    return $Call.ByID(3658504790, ids);
+}
+
+/**
  * RefreshEngine re-runs the locator. The dashboard calls it after the user
  * installs an engine or sets HYPO_ENGINE_ROOT.
  */

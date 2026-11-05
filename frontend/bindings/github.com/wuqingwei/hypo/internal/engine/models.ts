@@ -301,3 +301,49 @@ export interface StatusSnapshot {
     "process_watch": ProcessWatchConfig;
     "process_alerts": ProcessAlert[] | null;
 }
+
+/**
+ * UninstallApp is one row of the installed-applications inventory.
+ */
+export interface UninstallApp {
+    "name": string;
+    "id": string;
+    "source": string;
+    "version": string | null;
+    "publisher": string | null;
+    "path": string | null;
+    "size": string;
+    "size_bytes": number | null;
+}
+
+/**
+ * UninstallOutcome is one app's result in a --select run.
+ */
+export interface UninstallOutcome {
+    "id": string;
+    "name": string;
+
+    /**
+     * uninstalled | skipped | failed
+     */
+    "outcome": string;
+    "detail": string;
+}
+
+/**
+ * UninstallResult is one `mo uninstall --select --json` envelope.
+ */
+export interface UninstallResult {
+    "results": UninstallOutcome[] | null;
+    "incomplete": boolean;
+    "not_found"?: string[] | null;
+}
+
+/**
+ * UninstallRun is the outcome Hypo reports after an execute run: the
+ * envelope plus the charge-limit notices the engine printed on stderr.
+ */
+export interface UninstallRun {
+    "result": UninstallResult;
+    "notices"?: string[] | null;
+}

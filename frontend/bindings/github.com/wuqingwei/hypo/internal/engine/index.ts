@@ -27,5 +27,9 @@ export type {
     ProcessInfo,
     ProcessWatchConfig,
     ProxyStatus,
-    StatusSnapshot
+    StatusSnapshot,
+    UninstallApp,
+    UninstallOutcome,
+    UninstallResult,
+    UninstallRun
 } from "./models.js";

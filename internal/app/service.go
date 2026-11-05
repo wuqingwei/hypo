@@ -117,6 +117,15 @@ func (s *Service) GetCleanPreview() (*engine.CleanReport, error) {
 	return client.CleanPreview(context.Background())
 }
 
+// GetUninstallList returns the installed applications inventory.
+func (s *Service) GetUninstallList() ([]engine.UninstallApp, error) {
+	client, err := s.engineClient()
+	if err != nil {
+		return nil, err
+	}
+	return client.UninstallList(context.Background())
+}
+
 // GetCleanRun runs the engine's `clean --json` (execute mode) after the
 // frontend has collected an explicit confirmation. The engine re-enumerates
 // and re-runs every guard at execution time; the preview's selection is
@@ -127,6 +136,18 @@ func (s *Service) GetCleanRun() (*engine.CleanReport, error) {
 		return nil, err
 	}
 	return client.CleanRun(context.Background())
+}
+
+// GetUninstallSelect runs the engine's headless uninstall for the given
+// selection keys after the frontend has collected an explicit confirmation.
+// The engine rereads every registration right before launch and re-runs its
+// guards; Hypo adds nothing to the decision.
+func (s *Service) GetUninstallSelect(ids []string) (*engine.UninstallRun, error) {
+	client, err := s.engineClient()
+	if err != nil {
+		return nil, err
+	}
+	return client.UninstallSelect(context.Background(), ids)
 }
 
 func (s *Service) engineClient() (*engine.Client, error) {
