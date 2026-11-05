@@ -191,6 +191,8 @@ type runResult struct {
 // failure turns a non-zero exit into an actionable error, including the
 // context deadline when the run was killed by one and the last stderr lines
 // (the engine routes progress and diagnostics there when output is captured).
+// For envelope-bearing commands the stdout head is appended too: a leaked
+// interactive row ahead of the JSON is exactly the evidence needed.
 func (r *runResult) failure(what string, ctx context.Context) error {
 	msg := fmt.Sprintf("%s failed with exit code %d", what, r.exitCode)
 	if ctxErr := ctx.Err(); ctxErr != nil {
@@ -198,6 +200,12 @@ func (r *runResult) failure(what string, ctx context.Context) error {
 	}
 	if tail := lastLines(r.stderr, 6); tail != "" {
 		msg += "\n" + tail
+	}
+	if head := strings.TrimSpace(r.stdout); head != "" {
+		if len(head) > 200 {
+			head = head[:200] + "…"
+		}
+		msg += "\nstdout head: " + head
 	}
 	return errors.New(msg)
 }
