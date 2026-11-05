@@ -14,7 +14,9 @@ machine, not only in CI.
       processes, recent operations
 - [x] Orchestration unit tests runnable on Linux (fake engine executables)
 - [x] CI: gofmt/vet/test + frontend build + Windows cross-build
-- [ ] Smoke run on a real Windows machine against a real engine
+- [x] Smoke run on a real Windows machine against a real engine
+      (2026-11-05, Windows 10 22H2: packaged engine route, native status
+      tool, live metrics, real operations-log history rendered)
 
 ## M1 — engine headless surface
 
