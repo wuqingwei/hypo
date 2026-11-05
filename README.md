@@ -9,23 +9,26 @@ delete, recycle and uninstall runs through the engine's own guarded pipeline
 (`Remove-SafeItem` and friends, protected paths, owner guards, the operations
 log). Hypo itself contains no deletion logic and never will.
 
-![status: M0](https://img.shields.io/badge/milestone-M0%20scaffold-blue)
+![status: M1](https://img.shields.io/badge/milestone-M1%20engine%20surface-green)
 
-## Current state — M0
+## What works today
 
-- Engine locator: finds a Mole engine via `HYPO_ENGINE_ROOT`, an `engine/`
-  folder beside the executable, or a Mole checkout beside the Hypo source tree
-- `EngineClient`: runs `status` / `history` / `analyze` as hidden subprocesses
-  with JSON contracts, timeouts and cancellation; prefers the native Go tools
-  (no PowerShell startup cost) and falls back to `mole.ps1`
-- Dashboard: health score, CPU / memory / disks / network / battery cards,
-  top processes, recent operations from the operations log
-- Unit tests for the orchestration layer (run on any OS with fake engine
-  executables)
+Three pages, all verified on real Windows 10/11 hardware:
 
-Next milestones live in [docs/ROADMAP.md](docs/ROADMAP.md). The engine-side
-changes Hypo needs (for example `clean --json`) are specified in
-[docs/ENGINE-CONTRACT.md](docs/ENGINE-CONTRACT.md).
+- **Dashboard** — live health score, CPU (per-core), memory, disks, network,
+  battery and top processes from the engine's `status --json`, polling every
+  5 s while the window is visible; recent operations rendered from the
+  engine's operations log.
+- **Cleanup** — a full preview → confirm → execute → reconcile loop over the
+  engine's `clean` command. The preview is the engine's own dry run
+  (`clean --dry-run --json`); execution re-runs every engine guard and the
+  result view compares what was freed against what was previewed, with the
+  engine's skip reasons per row.
+- **Uninstall** — the engine's application inventory (searchable, with sizes
+  and sources), multi-select, an explicit confirmation, and a per-row results
+  view (`uninstalled` / `skipped` / `failed` with reasons, charge-limit
+  notices, incomplete badge). Uninstallers run exactly as registered, once,
+  with the engine's own reread-before-launch and 30-minute ceiling.
 
 ## Safety model
 
@@ -35,50 +38,93 @@ built around not bypassing them:
 1. **Hypo never deletes.** All mutations go through engine subprocesses.
 2. **Recycle-first, always.** The engine recycles and never falls back to
    permanent deletion; neither does Hypo ask it to.
-3. **Preview and execute share one code path.** What a dry run reports is what
-   the real run does.
+3. **Preview and execute share one code path.** What a dry run reports is
+   what the real run does — the engine's JSON records are captured at the
+   same points as its summary counters, so parity is by construction.
 4. **The engine re-checks everything at removal time.** A checkbox in the GUI
-   is intent, never a list of files to delete.
+   is intent, never a list of files to delete; between preview and execute
+   the engine re-enumerates and re-runs every guard.
 5. **Everything is logged.** The operations log records each removal; the
    dashboard renders it instead of keeping its own.
+6. **Structured output fails loud.** Any unexpected byte on a JSON pipe — a
+   leaked interactive row, vendor uninstaller output — surfaces in the error
+   message with the stdout head, rather than being parsed anyway.
 
-See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the full layering.
+See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the layering and
+[docs/ENGINE-CONTRACT.md](docs/ENGINE-CONTRACT.md) for every JSON contract,
+including the engine-side features this project added (`clean --json`,
+`uninstall --select`).
 
-## Prerequisites
+## The engine
 
-- Go 1.26+
-- Node.js 20+ with npm
-- A Mole engine (a clone of the [`windows` branch](https://github.com/tw93/Mole/tree/windows)
-  works): placed beside this repo, or pointed at by `HYPO_ENGINE_ROOT`
-- Wails CLI v3: `go install github.com/wailsapp/wails/v3/cmd/wails3@latest`
-- To *run* the app: Windows 10/11 (WebView2 is preinstalled). Building and
-  unit-testing works on Linux/macOS.
+Hypo drives an unmodified [Mole CLI](https://github.com/tw93/Mole) tree
+(Windows branch) located via, in order:
 
-## Development
+1. `HYPO_ENGINE_ROOT` — an explicit path (an invalid value is an error, not a
+   silent skip)
+2. an `engine\` folder beside the Hypo executable — how the deploy package
+   ships it
+3. a Mole checkout beside the Hypo source tree — development layout
+
+A candidate counts as an engine only when both `mole.ps1` and
+`lib/core/base.ps1` exist; a tree without the safety core is refused. Native
+Go tools (`bin/status.exe`, `bin/analyze.exe`) are used directly when present
+— no PowerShell startup cost — with `mole.ps1` as the self-healing fallback.
+
+Two CLI features were added to the engine for this project (GPL-3.0, on the
+`feat/clean-json` branch, upstreamable as pure scriptability improvements):
+
+- `mo clean [--dry-run] --json` — one JSON envelope for the whole run
+- `mo uninstall --select <id[,id...]> [--yes] [--json]` — headless uninstall
+  keyed by the ids `mo uninstall --list` already publishes
+
+## Building and running
+
+Prerequisites: Go 1.26+, Node 20+ with npm, the Wails v3 CLI
+(`go install github.com/wailsapp/wails/v3/cmd/wails3@latest`), and a Mole
+engine tree (see above). Running the app needs Windows 10/11 (WebView2 ships
+with the OS); building and unit-testing work on Linux/macOS.
 
 ```bash
-# from the repo root
-cd frontend && npm install && npm run build && cd ..
+# one-command Windows deploy package (frontend + exe + engine runtime + zip)
+pwsh -NoProfile -File scripts/package.ps1
 
 # regenerate TypeScript bindings after changing service methods
 GOOS=windows wails3 generate bindings -clean=true -ts -i
 
-# checks (Linux/macOS friendly; the Windows target avoids host webview deps)
+# checks
 gofmt -l . && go vet ./internal/... && go test ./internal/... && GOOS=windows go vet ./...
-GOOS=windows go build -o bin/hypo.exe .
+cd frontend && npm install && npm run build
 
-# full dev experience on Windows
+# run in dev on Windows
 wails3 dev -config ./build/config.yml
 ```
 
-With a Mole checkout beside this repo, the locator finds it automatically; the
-dashboard then shows live metrics from your machine.
+The engine's prebuilt native tools cross-compile from the Mole checkout:
+
+```bash
+cd ../Mole
+GOOS=windows go build -o bin/status.exe ./cmd/status
+GOOS=windows go build -o bin/analyze.exe ./cmd/analyze
+```
+
+The orchestrator's unit tests run on any OS with fake engine executables; CI
+(`.github/workflows/check.yml`) runs fmt, vet, tests, the frontend build and
+a Windows cross-build on every push.
+
+## Roadmap
+
+Done and next steps live in [docs/ROADMAP.md](docs/ROADMAP.md). In short:
+M1 (engine headless surface + the three pages above) is complete; next
+candidates are the analyze treemap page, history and whitelist UIs, a full
+Windows PowerShell 5.1 test run of the engine additions, and proposing
+`feat/clean-json` upstream.
 
 ## Trademark
 
 "Mole" and the Mole logo are trademarks of the Mole project. Hypo is an
-independent GPL fork ecosystem project: it uses its own name and icon, and
-does not imply endorsement by or affiliation with Mole. See the engine's
+independent community project: it uses its own name and icon, and does not
+imply endorsement by or affiliation with Mole. See the engine's
 `TRADEMARK.md`.
 
 ## License
