@@ -75,8 +75,9 @@ async function execute(): Promise<void> {
     // The cache the list was built from is gone after a run.
     apps.value = []
   } catch (err) {
+    // Keep the list visible; the banner above it carries the failure.
     runError.value = String(err)
-    phase.value = "error"
+    phase.value = "list"
   } finally {
     loading.value = false
   }

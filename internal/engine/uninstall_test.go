@@ -125,3 +125,42 @@ func TestUninstallSelectReportsNotFound(t *testing.T) {
 		t.Errorf("not_found = %v", run.Result.NotFound)
 	}
 }
+
+func TestUninstallSelectExitOneStillYieldsEnvelope(t *testing.T) {
+	root := t.TempDir()
+	writeEngineTree(t, root, false)
+	// The engine's designed partial-failure outcome: a full envelope with
+	// per-row results, then exit 1. Throwing the envelope away would hide
+	// which app failed and why.
+	ps := writeScript(t, root, "fake-ps", `printf 'engine note' >&2; printf '%s' '{"results":[{"id":"registry:X","name":"X","outcome":"failed","detail":"still installed, exit code 3"}],"incomplete":true}'; exit 1`)
+
+	install, err := installationAt(root, SourceEnv)
+	if err != nil {
+		t.Fatal(err)
+	}
+	run, err := NewClientWithPowerShell(install, ps).UninstallSelect(context.Background(), []string{"registry:X"})
+	if err != nil {
+		t.Fatalf("exit 1 with an envelope must not be an error: %v", err)
+	}
+	if !run.Result.Incomplete {
+		t.Error("incomplete flag lost")
+	}
+	if len(run.Result.Results) != 1 || run.Result.Results[0].Outcome != "failed" {
+		t.Errorf("results = %+v", run.Result.Results)
+	}
+}
+
+func TestUninstallSelectOtherExitCodesStayErrors(t *testing.T) {
+	root := t.TempDir()
+	writeEngineTree(t, root, false)
+	ps := writeScript(t, root, "fake-ps", `printf '%s' '{"results":[],"incomplete":false}'; exit 2`)
+
+	install, err := installationAt(root, SourceEnv)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = NewClientWithPowerShell(install, ps).UninstallSelect(context.Background(), []string{"registry:X"})
+	if err == nil || !strings.Contains(err.Error(), "exit code 2") {
+		t.Fatalf("err = %v, want exit code 2 surfaced", err)
+	}
+}

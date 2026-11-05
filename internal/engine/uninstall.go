@@ -77,6 +77,13 @@ func (c *Client) UninstallList(ctx context.Context) ([]UninstallApp, error) {
 // the result plus the engine's stderr NOTICE lines (charge limits). This is
 // the only call besides CleanRun that asks the engine to remove software;
 // the caller confirms with the user first.
+//
+// Exit code 1 is a designed outcome, not a transport failure: the engine
+// prints the full JSON envelope (with incomplete=true and per-row outcomes)
+// when any uninstaller failed, kept its entry or was skipped as ineligible,
+// and only then exits 1. The envelope is decoded and returned in that case;
+// a hard error is anything else — a different exit code, or stdout that does
+// not decode.
 func (c *Client) UninstallSelect(ctx context.Context, ids []string) (*UninstallRun, error) {
 	if len(ids) == 0 {
 		return nil, fmt.Errorf("no selection keys given")
@@ -87,12 +94,15 @@ func (c *Client) UninstallSelect(ctx context.Context, ids []string) (*UninstallR
 	if err != nil {
 		return nil, err
 	}
-	if res.exitCode != 0 {
-		return nil, res.failure("mo uninstall --select", ctx)
-	}
 	var result UninstallResult
-	if err := decodeJSON(res.stdout, &result); err != nil {
-		return nil, fmt.Errorf("decode mo uninstall --select output: %w", err)
+	if decodeErr := decodeJSON(res.stdout, &result); decodeErr != nil {
+		if res.exitCode != 0 {
+			return nil, res.failure("mo uninstall --select", ctx)
+		}
+		return nil, fmt.Errorf("decode mo uninstall --select output: %w", decodeErr)
+	}
+	if res.exitCode != 0 && res.exitCode != 1 {
+		return nil, res.failure("mo uninstall --select", ctx)
 	}
 	run := &UninstallRun{Result: result}
 	for _, line := range strings.Split(res.stderr, "\n") {
