@@ -96,10 +96,21 @@ func (c *Client) UninstallSelect(ctx context.Context, ids []string) (*UninstallR
 	}
 	var result UninstallResult
 	if decodeErr := decodeJSON(res.stdout, &result); decodeErr != nil {
+		// The envelope failed to parse. With a non-zero exit the engine's own
+		// diagnostic wins; with exit 0 the stdout head is the evidence of what
+		// polluted the pipe (a leaked interactive row, a BOM, a truncated
+		// write), so surface it instead of a bare decode error.
 		if res.exitCode != 0 {
 			return nil, res.failure("mo uninstall --select", ctx)
 		}
-		return nil, fmt.Errorf("decode mo uninstall --select output: %w", decodeErr)
+		head := strings.TrimSpace(res.stdout)
+		if len(head) > 200 {
+			head = head[:200] + "…"
+		}
+		if head == "" {
+			head = "(stdout empty)"
+		}
+		return nil, fmt.Errorf("decode mo uninstall --select output: %w\nstdout head: %s", decodeErr, head)
 	}
 	if res.exitCode != 0 && res.exitCode != 1 {
 		return nil, res.failure("mo uninstall --select", ctx)
