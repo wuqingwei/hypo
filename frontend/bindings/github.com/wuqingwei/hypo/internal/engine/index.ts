@@ -35,5 +35,6 @@ export type {
     UninstallApp,
     UninstallOutcome,
     UninstallResult,
-    UninstallRun
+    UninstallRun,
+    Whitelist
 } from "./models.js";

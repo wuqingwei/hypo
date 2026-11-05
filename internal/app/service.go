@@ -161,6 +161,35 @@ func (s *Service) GetAnalyze(path string) (*engine.AnalyzeReport, error) {
 	return client.AnalyzeReport(context.Background(), path)
 }
 
+// GetWhitelist returns the engine's built-in patterns and the user file's
+// lines. Read-only.
+func (s *Service) GetWhitelist() (*engine.Whitelist, error) {
+	client, err := s.engineClient()
+	if err != nil {
+		return nil, err
+	}
+	return client.GetWhitelist(context.Background())
+}
+
+// AddWhitelistEntry appends one user pattern; the engine picks it up on its
+// next run because it re-reads the file every time.
+func (s *Service) AddWhitelistEntry(pattern string) (*engine.Whitelist, error) {
+	client, err := s.engineClient()
+	if err != nil {
+		return nil, err
+	}
+	return client.AddWhitelistEntry(context.Background(), pattern)
+}
+
+// RemoveWhitelistEntry deletes one user pattern line (exact, case-insensitive).
+func (s *Service) RemoveWhitelistEntry(pattern string) (*engine.Whitelist, error) {
+	client, err := s.engineClient()
+	if err != nil {
+		return nil, err
+	}
+	return client.RemoveWhitelistEntry(context.Background(), pattern)
+}
+
 func (s *Service) engineClient() (*engine.Client, error) {
 	s.mu.Lock()
 	client := s.client

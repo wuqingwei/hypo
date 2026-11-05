@@ -20,6 +20,14 @@ import * as engine$0 from "../engine/models.js";
 import * as $models from "./models.js";
 
 /**
+ * AddWhitelistEntry appends one user pattern; the engine picks it up on its
+ * next run because it re-reads the file every time.
+ */
+export function AddWhitelistEntry(pattern: string): $CancellablePromise<engine$0.Whitelist | null> {
+    return $Call.ByID(2202836640, pattern);
+}
+
+/**
  * GetAnalyze returns the engine's read-only directory scan (or the overview
  * set when path is empty). This never deletes anything: the engine's JSON
  * mode is read-only by contract.
@@ -88,9 +96,24 @@ export function GetUninstallSelect(ids: string[] | null): $CancellablePromise<en
 }
 
 /**
+ * GetWhitelist returns the engine's built-in patterns and the user file's
+ * lines. Read-only.
+ */
+export function GetWhitelist(): $CancellablePromise<engine$0.Whitelist | null> {
+    return $Call.ByID(3290339517);
+}
+
+/**
  * RefreshEngine re-runs the locator. The dashboard calls it after the user
  * installs an engine or sets HYPO_ENGINE_ROOT.
  */
 export function RefreshEngine(): $CancellablePromise<$models.EngineInfo> {
     return $Call.ByID(524673341);
+}
+
+/**
+ * RemoveWhitelistEntry deletes one user pattern line (exact, case-insensitive).
+ */
+export function RemoveWhitelistEntry(pattern: string): $CancellablePromise<engine$0.Whitelist | null> {
+    return $Call.ByID(3236012039, pattern);
 }

@@ -397,3 +397,32 @@ export interface UninstallRun {
     "result": UninstallResult;
     "notices"?: string[] | null;
 }
+
+/**
+ * Whitelist is the merged view the UI renders.
+ */
+export interface Whitelist {
+    /**
+     * Path is the file the user patterns live in.
+     */
+    "path": string;
+
+    /**
+     * Defaults are the engine's built-in protected patterns; read-only for
+     * Hypo. Empty when the engine could not report them (the UI shows a
+     * note instead of inventing rows).
+     */
+    "defaults": string[] | null;
+
+    /**
+     * UserPatterns are the file's own lines, verbatim minus blank lines and
+     * '#' comments.
+     */
+    "user_patterns": string[] | null;
+
+    /**
+     * Error carries a read failure; an unreadable whitelist must not render
+     * as an empty editable list.
+     */
+    "error"?: string;
+}

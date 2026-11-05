@@ -16,6 +16,8 @@ import MetricCard from "./components/MetricCard.vue"
 import PercentBar from "./components/PercentBar.vue"
 import UninstallPage from "./components/UninstallPage.vue"
 import AnalyzePage from "./components/AnalyzePage.vue"
+import HistoryPage from "./components/HistoryPage.vue"
+import WhitelistPage from "./components/WhitelistPage.vue"
 import {
   formatBytes,
   formatCount,
@@ -133,7 +135,7 @@ function onVisibility(): void {
 const recentOperations = computed(() => history.value?.operations ?? [])
 const topProcesses = computed(() => (snapshot.value?.top_processes ?? []).slice(0, 6))
 
-const activeTab = ref<"dashboard" | "cleanup" | "uninstall" | "analyze">("dashboard")
+const activeTab = ref<"dashboard" | "cleanup" | "uninstall" | "analyze" | "whitelist" | "history">("dashboard")
 
 const engineTooltipNoTool = computed(
   () =>
@@ -177,6 +179,8 @@ onUnmounted(() => {
         <button class="tab" :class="{ active: activeTab === 'cleanup' }" @click="activeTab = 'cleanup'">Cleanup</button>
         <button class="tab" :class="{ active: activeTab === 'uninstall' }" @click="activeTab = 'uninstall'">Uninstall</button>
         <button class="tab" :class="{ active: activeTab === 'analyze' }" @click="activeTab = 'analyze'">Analyze</button>
+        <button class="tab" :class="{ active: activeTab === 'whitelist' }" @click="activeTab = 'whitelist'">Whitelist</button>
+        <button class="tab" :class="{ active: activeTab === 'history' }" @click="activeTab = 'history'">History</button>
       </nav>
       <div class="spacer" />
 
@@ -193,6 +197,8 @@ onUnmounted(() => {
       <CleanupPage v-if="activeTab === 'cleanup'" />
       <UninstallPage v-else-if="activeTab === 'uninstall'" />
       <AnalyzePage v-else-if="activeTab === 'analyze'" />
+      <WhitelistPage v-else-if="activeTab === 'whitelist'" />
+      <HistoryPage v-else-if="activeTab === 'history'" />
       <template v-else>
         <div v-if="engine && !engine.found" class="panel error-panel">
           <h2>Mole engine not found</h2>
