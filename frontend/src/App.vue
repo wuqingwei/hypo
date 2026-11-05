@@ -327,7 +327,7 @@ onUnmounted(() => {
 
 <style scoped>
 .app {
-  min-height: 100vh;
+  height: 100vh;
   display: flex;
   flex-direction: column;
 }
@@ -436,6 +436,9 @@ onUnmounted(() => {
 
 .content {
   flex: 1;
+  /* min-height:0 lets this box shrink and own the scroll; children flow
+     naturally (the cleanup page lists hundreds of rows). */
+  min-height: 0;
   padding: 20px 22px 28px;
   overflow-y: auto;
 }

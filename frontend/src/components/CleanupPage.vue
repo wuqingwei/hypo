@@ -272,8 +272,7 @@ onMounted(refresh)
 <style scoped>
 .cleanup {
   padding: 20px 22px 76px;
-  overflow-y: auto;
-  height: 100%;
+  min-height: 100%;
 }
 .cleanup-head {
   display: flex;
