@@ -20,6 +20,16 @@ import * as engine$0 from "../engine/models.js";
 import * as $models from "./models.js";
 
 /**
+ * GetCleanPreview runs the engine's `clean --dry-run --json`. It deletes
+ * nothing: dry run is the engine's own guarantee. The records are display
+ * facts for the cleanup page; execution is a separate, later call that the
+ * user confirms explicitly.
+ */
+export function GetCleanPreview(): $CancellablePromise<engine$0.CleanReport | null> {
+    return $Call.ByID(4144355647);
+}
+
+/**
  * GetEngineInfo returns the current engine presence and location.
  */
 export function GetEngineInfo(): $CancellablePromise<$models.EngineInfo> {

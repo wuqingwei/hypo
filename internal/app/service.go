@@ -105,6 +105,18 @@ func (s *Service) GetHistory(limit int) (*engine.HistoryReport, error) {
 	return client.History(context.Background(), limit)
 }
 
+// GetCleanPreview runs the engine's `clean --dry-run --json`. It deletes
+// nothing: dry run is the engine's own guarantee. The records are display
+// facts for the cleanup page; execution is a separate, later call that the
+// user confirms explicitly.
+func (s *Service) GetCleanPreview() (*engine.CleanReport, error) {
+	client, err := s.engineClient()
+	if err != nil {
+		return nil, err
+	}
+	return client.CleanPreview(context.Background())
+}
+
 func (s *Service) engineClient() (*engine.Client, error) {
 	s.mu.Lock()
 	client := s.client

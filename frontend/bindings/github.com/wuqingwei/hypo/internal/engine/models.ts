@@ -25,6 +25,72 @@ export interface CPUStatus {
 }
 
 /**
+ * CleanAction is one outcome in the report's records.
+ */
+export enum CleanAction {
+    /**
+     * The Go zero value for the underlying type of the enum.
+     */
+    $zero = "",
+
+    CleanWouldRemove = "would_remove",
+    CleanWouldRecycle = "would_recycle",
+    CleanRemoved = "removed",
+    CleanRecycled = "recycled",
+    CleanSkipped = "skipped",
+    CleanFailed = "failed",
+};
+
+/**
+ * CleanRecord is one path the engine's Remove-SafeItem family touched during
+ * the run, captured at the same point the summary counters are updated.
+ */
+export interface CleanRecord {
+    "description": string;
+    "path": string;
+    "size_bytes": number;
+    "action": CleanAction;
+    "reason"?: string;
+}
+
+/**
+ * CleanReport is one `mo clean --json` envelope.
+ */
+export interface CleanReport {
+    /**
+     * "preview" or "execute"
+     */
+    "mode": string;
+    "scope": CleanScope;
+    "records": CleanRecord[] | null;
+    "totals": CleanTotals;
+    "error"?: string;
+}
+
+/**
+ * CleanScope reports the flags that actually ran (--system downgrades to
+ * false without admin, and the report says what ran, not what was asked).
+ */
+export interface CleanScope {
+    "system": boolean;
+    "game_media": boolean;
+    "gpu_shaders": boolean;
+}
+
+/**
+ * CleanTotals is the engine's own accounting figure. The engine sums group
+ * sizes in KB with a per-group ceiling, so SizeBytes may exceed the sum of
+ * per-record sizes by at most records × 1024; it is authoritative for freed
+ * space and must never be re-derived from the records.
+ */
+export interface CleanTotals {
+    "size_bytes": number;
+    "items": number;
+    "groups": number;
+    "owner_cleanups": number;
+}
+
+/**
  * DiskIOStatus is aggregate disk throughput.
  */
 export interface DiskIOStatus {

@@ -10,6 +10,7 @@ import {
 import type { EngineInfo } from "../bindings/github.com/wuqingwei/hypo/internal/app/models.js"
 import type { HistoryReport, StatusSnapshot } from "../bindings/github.com/wuqingwei/hypo/internal/engine/models.js"
 
+import CleanupPage from "./components/CleanupPage.vue"
 import HealthRing from "./components/HealthRing.vue"
 import MetricCard from "./components/MetricCard.vue"
 import PercentBar from "./components/PercentBar.vue"
@@ -130,6 +131,8 @@ function onVisibility(): void {
 const recentOperations = computed(() => history.value?.operations ?? [])
 const topProcesses = computed(() => (snapshot.value?.top_processes ?? []).slice(0, 6))
 
+const activeTab = ref<"dashboard" | "cleanup">("dashboard")
+
 const engineTooltipNoTool = computed(
   () =>
     `${engine.value?.root ?? ""}\n` +
@@ -167,6 +170,10 @@ onUnmounted(() => {
         no engine
       </div>
 
+      <nav class="tabs">
+        <button class="tab" :class="{ active: activeTab === 'dashboard' }" @click="activeTab = 'dashboard'">Dashboard</button>
+        <button class="tab" :class="{ active: activeTab === 'cleanup' }" @click="activeTab = 'cleanup'">Cleanup</button>
+      </nav>
       <div class="spacer" />
 
       <label class="auto-toggle" title="Refresh metrics every 5 seconds">
@@ -179,13 +186,15 @@ onUnmounted(() => {
     </header>
 
     <main class="content">
-      <div v-if="engine && !engine.found" class="panel error-panel">
-        <h2>Mole engine not found</h2>
-        <p class="error-text">{{ engine.error }}</p>
-        <button class="btn" :disabled="refreshing" @click="retryEngine">Retry</button>
-      </div>
-
+      <CleanupPage v-if="activeTab === 'cleanup'" />
       <template v-else>
+        <div v-if="engine && !engine.found" class="panel error-panel">
+          <h2>Mole engine not found</h2>
+          <p class="error-text">{{ engine.error }}</p>
+          <button class="btn" :disabled="refreshing" @click="retryEngine">Retry</button>
+        </div>
+
+        <template v-else>
         <div v-if="statusError" class="banner error-banner">
           <span>{{ statusError }}</span>
           <button class="btn small" @click="refreshAll">Retry</button>
@@ -305,6 +314,7 @@ onUnmounted(() => {
             </p>
           </MetricCard>
         </div>
+        </template>
       </template>
     </main>
 
@@ -386,6 +396,30 @@ onUnmounted(() => {
 }
 .spacer {
   flex: 1;
+}
+.tabs {
+  display: flex;
+  gap: 4px;
+  margin-left: 10px;
+}
+.tab {
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--muted);
+  border-radius: 8px;
+  padding: 5px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  --wails-draggable: no-drag;
+}
+.tab:hover {
+  color: var(--text);
+}
+.tab.active {
+  color: var(--text);
+  background: var(--card);
+  border-color: var(--border);
 }
 .auto-toggle {
   display: inline-flex;
