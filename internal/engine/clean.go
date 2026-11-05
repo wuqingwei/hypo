@@ -63,8 +63,9 @@ type CleanReport struct {
 
 // cleanJSONTimeout: a dry run walks every cleanup target and can take
 // minutes on a full disk; the dashboard's other calls keep their short
-// budgets.
-const cleanJSONTimeout = 5 * time.Minute
+// budgets. A real run re-walks the same targets while deleting, so it gets
+// the same generous budget.
+const cleanJSONTimeout = 10 * time.Minute
 
 // CleanPreview runs `clean --dry-run --json` and decodes the envelope. It
 // mutates nothing: dry run is the engine's own guarantee, and this call adds
@@ -85,6 +86,31 @@ func (c *Client) CleanPreview(ctx context.Context) (*CleanReport, error) {
 	}
 	if report.Mode != "preview" {
 		return nil, fmt.Errorf("mo clean reported mode %q, want preview", report.Mode)
+	}
+	return &report, nil
+}
+
+// CleanRun runs `clean --json` (execute mode). This is the only call in the
+// client that asks the engine to delete. The GUI calls it only after an
+// explicit user confirmation; selection state from the preview is intent the
+// engine re-derives: the engine re-enumerates and re-runs every guard, so
+// what it removes is what the guards allow, not what a checkbox promised.
+func (c *Client) CleanRun(ctx context.Context) (*CleanReport, error) {
+	ctx, cancel := context.WithTimeout(ctx, cleanJSONTimeout)
+	defer cancel()
+	res, err := c.powershell(ctx, "clean", "--json")
+	if err != nil {
+		return nil, err
+	}
+	if res.exitCode != 0 {
+		return nil, res.failure("mo clean --json", ctx)
+	}
+	var report CleanReport
+	if err := decodeJSON(res.stdout, &report); err != nil {
+		return nil, fmt.Errorf("decode mo clean output: %w", err)
+	}
+	if report.Mode != "execute" {
+		return nil, fmt.Errorf("mo clean reported mode %q, want execute", report.Mode)
 	}
 	return &report, nil
 }

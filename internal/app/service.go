@@ -117,6 +117,18 @@ func (s *Service) GetCleanPreview() (*engine.CleanReport, error) {
 	return client.CleanPreview(context.Background())
 }
 
+// GetCleanRun runs the engine's `clean --json` (execute mode) after the
+// frontend has collected an explicit confirmation. The engine re-enumerates
+// and re-runs every guard at execution time; the preview's selection is
+// intent, never a list of files to delete.
+func (s *Service) GetCleanRun() (*engine.CleanReport, error) {
+	client, err := s.engineClient()
+	if err != nil {
+		return nil, err
+	}
+	return client.CleanRun(context.Background())
+}
+
 func (s *Service) engineClient() (*engine.Client, error) {
 	s.mu.Lock()
 	client := s.client

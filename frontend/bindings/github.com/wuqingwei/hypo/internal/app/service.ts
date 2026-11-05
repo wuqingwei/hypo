@@ -30,6 +30,16 @@ export function GetCleanPreview(): $CancellablePromise<engine$0.CleanReport | nu
 }
 
 /**
+ * GetCleanRun runs the engine's `clean --json` (execute mode) after the
+ * frontend has collected an explicit confirmation. The engine re-enumerates
+ * and re-runs every guard at execution time; the preview's selection is
+ * intent, never a list of files to delete.
+ */
+export function GetCleanRun(): $CancellablePromise<engine$0.CleanReport | null> {
+    return $Call.ByID(1806138226);
+}
+
+/**
  * GetEngineInfo returns the current engine presence and location.
  */
 export function GetEngineInfo(): $CancellablePromise<$models.EngineInfo> {

@@ -102,3 +102,63 @@ func TestCleanPreviewReportsEngineFailure(t *testing.T) {
 		t.Fatalf("err = %v, want the engine exit code", err)
 	}
 }
+
+const cleanExecuteFixture = `{
+  "mode": "execute",
+  "scope": { "system": false, "game_media": false, "gpu_shaders": false },
+  "records": [
+    { "description": "User temp files (>7d old)", "path": "C:\\Users\\u\\AppData\\Local\\Temp\\a.tmp", "size_bytes": 1348, "action": "removed" },
+    { "description": "Notion cache", "path": "C:\\Users\\u\\AppData\\Roaming\\Notion\\Cache", "size_bytes": 544000, "action": "skipped", "reason": "file held by owner" }
+  ],
+  "totals": { "size_bytes": 545280, "items": 1, "groups": 2, "owner_cleanups": 0 }
+}`
+
+func TestCleanRunDecodesExecuteEnvelope(t *testing.T) {
+	root := t.TempDir()
+	writeEngineTree(t, root, false)
+	ps := writeScript(t, root, "fake-ps", `
+case " $* " in
+  *" clean --json "*) ;;
+  *" dry-run "*) echo "execute must not pass --dry-run" >&2; exit 8 ;;
+esac
+printf '%s' '`+cleanExecuteFixture+`'
+`)
+
+	install, err := installationAt(root, SourceEnv)
+	if err != nil {
+		t.Fatal(err)
+	}
+	report, err := NewClientWithPowerShell(install, ps).CleanRun(context.Background())
+	if err != nil {
+		t.Fatalf("clean run failed: %v", err)
+	}
+	if report.Mode != "execute" {
+		t.Errorf("mode = %q", report.Mode)
+	}
+	if report.Records[0].Action != CleanRemoved || report.Records[0].SizeBytes != 1348 {
+		t.Errorf("removed record = %+v", report.Records[0])
+	}
+	if report.Records[1].Action != CleanSkipped || !strings.Contains(report.Records[1].Reason, "held") {
+		t.Errorf("skipped record = %+v", report.Records[1])
+	}
+	if report.Totals.SizeBytes != 545280 || report.Totals.Items != 1 {
+		t.Errorf("totals = %+v", report.Totals)
+	}
+}
+
+func TestCleanRunRejectsPreviewMode(t *testing.T) {
+	root := t.TempDir()
+	writeEngineTree(t, root, false)
+	// A preview envelope answering an execute request means the engine did
+	// not delete; reporting it as a result would lie to the user.
+	ps := writeScript(t, root, "fake-ps", `printf '%s' '{"mode":"preview","scope":{},"records":[],"totals":{"size_bytes":0,"items":0,"groups":0,"owner_cleanups":0}}'`)
+
+	install, err := installationAt(root, SourceEnv)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = NewClientWithPowerShell(install, ps).CleanRun(context.Background())
+	if err == nil || !strings.Contains(err.Error(), "want execute") {
+		t.Fatalf("err = %v, want a mode mismatch", err)
+	}
+}
