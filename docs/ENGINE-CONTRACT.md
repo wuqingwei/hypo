@@ -111,6 +111,14 @@ Invariants the engine already enforces and the JSON must preserve:
 - outcomes use the log's vocabulary (`removed`, `recycled`, `skipped`,
   `failed`).
 
+Accounting note (settled against the implemented `clean --json`): the engine
+sums group sizes in KB with a per-group ceiling before adding to its totals,
+so `totals.size_bytes` is the engine's own accounting figure — the same one
+the text summary prints — and may exceed the sum of per-record `size_bytes`
+by at most `records × 1024` bytes. Consumers must treat `totals` as the
+authoritative freed-space figure and the per-record sizes as per-item
+measurements, never re-derive one from the other.
+
 ### `uninstall --select <id> [--yes]`
 
 `mole.ps1 uninstall --select <key> --yes` runs the existing interactive
