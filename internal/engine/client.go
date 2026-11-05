@@ -18,9 +18,14 @@ import (
 // the uninstaller descendant ceiling); these only bound how long Hypo sits on
 // a pipe.
 const (
-	statusTimeout  = 30 * time.Second
-	historyTimeout = 30 * time.Second
-	analyzeTimeout = 10 * time.Minute
+	statusTimeout = 30 * time.Second
+	// statusScriptTimeout: the mole.ps1 route also downloads or builds the
+	// native tool when it is missing, which can legitimately take minutes on
+	// a slow network. Killing it at the dashboard's 30 s only turns a
+	// recoverable first run into an opaque timeout.
+	statusScriptTimeout = 2 * time.Minute
+	historyTimeout      = 30 * time.Second
+	analyzeTimeout      = 10 * time.Minute
 )
 
 // Client runs engine commands and decodes their JSON output. It is safe for
@@ -76,7 +81,7 @@ func (c *Client) statusViaTool(ctx context.Context) (*StatusSnapshot, error) {
 }
 
 func (c *Client) statusViaScript(ctx context.Context) (*StatusSnapshot, error) {
-	ctx, cancel := context.WithTimeout(ctx, statusTimeout)
+	ctx, cancel := context.WithTimeout(ctx, statusScriptTimeout)
 	defer cancel()
 	res, err := c.powershell(ctx, "status", "--json")
 	if err != nil {

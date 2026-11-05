@@ -41,7 +41,7 @@ async function loadEngineInfo(): Promise<void> {
   try {
     engine.value = await GetEngineInfo()
   } catch (err) {
-    engine.value = { found: false, error: String(err) }
+    engine.value = { found: false, error: String(err), status_tool: false }
   }
 }
 
@@ -58,13 +58,22 @@ async function retryEngine(): Promise<void> {
   }
 }
 
+// One status call in flight at a time: the poll interval (5 s) is shorter
+// than a failing call can take, and stacking engine subprocesses both wastes
+// work and multiplies the same error.
+let statusInFlight = false
+
 async function refreshStatus(): Promise<void> {
+  if (statusInFlight) return
+  statusInFlight = true
   try {
     snapshot.value = await GetStatus()
     statusError.value = ""
     lastUpdated.value = new Date()
   } catch (err) {
     statusError.value = String(err)
+  } finally {
+    statusInFlight = false
   }
 }
 
@@ -89,10 +98,19 @@ async function refreshAll(): Promise<void> {
   }
 }
 
+// While the last call failed, retry the poll only every 6th tick (~30 s)
+// instead of piling a fresh attempt on each 5 s tick.
+let errorTickCount = 0
+
 function startPolling(): void {
   stopPolling()
   pollTimer = window.setInterval(() => {
     if (!autoRefresh.value || document.hidden || !engineReady.value) return
+    if (statusError.value) {
+      errorTickCount++
+      if (errorTickCount < 6) return
+    }
+    errorTickCount = 0
     void refreshStatus()
   }, POLL_INTERVAL_MS)
 }
@@ -111,6 +129,13 @@ function onVisibility(): void {
 
 const recentOperations = computed(() => history.value?.operations ?? [])
 const topProcesses = computed(() => (snapshot.value?.top_processes ?? []).slice(0, 6))
+
+const engineTooltipNoTool = computed(
+  () =>
+    `${engine.value?.root ?? ""}\n` +
+    "Native status tool missing: the first refresh goes through mole.ps1, " +
+    "which downloads the tool from GitHub Releases or builds it with a local Go.",
+)
 
 onMounted(() => {
   void refreshAll().then(() => startPolling())
@@ -131,7 +156,8 @@ onUnmounted(() => {
         <span class="brand-tag">community</span>
       </div>
 
-      <div v-if="engineReady" class="engine-chip" :title="engine?.root">
+      <div v-if="engineReady" class="engine-chip" :class="{ degraded: !engine?.status_tool }"
+        :title="engine?.status_tool ? engine?.root : engineTooltipNoTool">
         <span class="chip-dot" />
         Mole engine <strong>{{ engine?.version || "unknown version" }}</strong>
         <span class="chip-source">({{ engine?.source }})</span>
@@ -354,6 +380,9 @@ onUnmounted(() => {
 }
 .engine-chip.missing .chip-dot {
   background: var(--danger);
+}
+.engine-chip.degraded .chip-dot {
+  background: var(--warn);
 }
 .spacer {
   flex: 1;

@@ -11,4 +11,11 @@ export interface EngineInfo {
     "version"?: string;
     "source"?: string;
     "error"?: string;
+
+    /**
+     * StatusTool reports whether the native status executable is present.
+     * When false, the first status call goes through mole.ps1, which tries
+     * to download the tool from GitHub Releases or build it with a local Go.
+     */
+    "status_tool": boolean;
 }

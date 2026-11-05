@@ -31,6 +31,10 @@ type EngineInfo struct {
 	Version string `json:"version,omitempty"`
 	Source  string `json:"source,omitempty"`
 	Error   string `json:"error,omitempty"`
+	// StatusTool reports whether the native status executable is present.
+	// When false, the first status call goes through mole.ps1, which tries
+	// to download the tool from GitHub Releases or build it with a local Go.
+	StatusTool bool `json:"status_tool"`
 }
 
 // Service is the Wails service for the M0 dashboard: engine presence, one
@@ -73,10 +77,11 @@ func (s *Service) RefreshEngine() EngineInfo {
 	}
 	s.client = engine.NewClient(install)
 	s.info = EngineInfo{
-		Found:   true,
-		Root:    install.Root,
-		Version: install.Version,
-		Source:  string(install.Source),
+		Found:      true,
+		Root:       install.Root,
+		Version:    install.Version,
+		Source:     string(install.Source),
+		StatusTool: install.StatusBin != "",
 	}
 	return s.info
 }
