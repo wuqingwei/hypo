@@ -20,6 +20,15 @@ import * as engine$0 from "../engine/models.js";
 import * as $models from "./models.js";
 
 /**
+ * GetAnalyze returns the engine's read-only directory scan (or the overview
+ * set when path is empty). This never deletes anything: the engine's JSON
+ * mode is read-only by contract.
+ */
+export function GetAnalyze(path: string): $CancellablePromise<engine$0.AnalyzeReport | null> {
+    return $Call.ByID(79871544, path);
+}
+
+/**
  * GetCleanPreview runs the engine's `clean --dry-run --json`. It deletes
  * nothing: dry run is the engine's own guarantee. The records are display
  * facts for the cleanup page; execution is a separate, later call that the

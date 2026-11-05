@@ -150,6 +150,17 @@ func (s *Service) GetUninstallSelect(ids []string) (*engine.UninstallRun, error)
 	return client.UninstallSelect(context.Background(), ids)
 }
 
+// GetAnalyze returns the engine's read-only directory scan (or the overview
+// set when path is empty). This never deletes anything: the engine's JSON
+// mode is read-only by contract.
+func (s *Service) GetAnalyze(path string) (*engine.AnalyzeReport, error) {
+	client, err := s.engineClient()
+	if err != nil {
+		return nil, err
+	}
+	return client.AnalyzeReport(context.Background(), path)
+}
+
 func (s *Service) engineClient() (*engine.Client, error) {
 	s.mu.Lock()
 	client := s.client
