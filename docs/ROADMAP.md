@@ -18,26 +18,27 @@ machine, not only in CI.
       (2026-11-05, Windows 10 22H2: packaged engine route, native status
       tool, live metrics, real operations-log history rendered)
 
-## M1 — engine headless surface
+## M1 — engine headless surface ✅ (2026-11-05)
 
-Changes land in the engine tree (upstreamable to the Mole `windows` branch as
-pure CLI scriptability features); contracts are specified in
-[ENGINE-CONTRACT.md](ENGINE-CONTRACT.md).
+Changes landed in the engine tree on the `feat/clean-json` branch (based on
+upstream windows HEAD, CI green, upstreamable as pure CLI scriptability
+features); contracts in [ENGINE-CONTRACT.md](ENGINE-CONTRACT.md).
 
-- [ ] `clean --json`: structured preview and result output
-- [ ] `uninstall --select <id> --yes`: non-interactive uninstall with the
+- [x] `clean --json`: structured preview and result output
+- [x] `uninstall --select <id> --yes`: non-interactive uninstall with the
       existing exit-code contract
-- [ ] Optional: JSONL progress events for long operations
-- [ ] Pester coverage for each flag, dry-run parity included
+- [ ] Optional: JSONL progress events for long operations (deferred — the
+      per-command envelope plus the engine's own progress UI cover M2's needs)
+- [x] Pester coverage for each flag, dry-run parity included
 
-## M2 — the four flows
+## M2 — the page set ✅ (2026-11-06, all verified on real Windows hardware)
 
-- [ ] Cleanup page: grouped targets, dry-run preview, execute, result
+- [x] Cleanup page: grouped targets, dry-run preview, execute, result
       reconciliation (expected vs actual, skipped reasons)
-- [ ] Analyze page: treemap (ECharts), drill-down, `cleanable` highlights
-- [ ] Uninstall page: search/sort/select, charge-limit notices preserved
-- [ ] Whitelist editor UI
-- [ ] History page: filtering and per-session grouping
+- [x] Analyze page: treemap (ECharts), drill-down, `cleanable` highlights
+- [x] Uninstall page: search/sort/select, charge-limit notices preserved
+- [x] Whitelist editor UI (built-in patterns read-only, user patterns add/remove)
+- [x] History page: filtering and per-session grouping
 
 ## M3 — productization
 
